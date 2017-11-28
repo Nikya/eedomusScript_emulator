@@ -15,8 +15,9 @@ isset($eedomusScriptsEmulatorDatasetPath) or die("Variable 'eedomusScriptsEmulat
 * Le code API du périphérique courant peut être récupéré via getArg('eedomus_controller_module_id')
 */
 function getArg($var, $mandatory = true, $default = ' ') {
-	if(isset($_GET[$var]) and !empty($_GET[$var]))
-		return $_GET[$var];
+	$v = strval($_GET[$var]);
+	if(isset($v) and !empty($v) )
+		return $v;
 	else if ($mandatory) {
 		throw new Exception( "Veuillez préciser la valeur de l'argument '$var' afin d'appeler ce script.");
 		exit -1;
@@ -80,19 +81,22 @@ function jsonToXML($jsonStr) {
 	return emulator_array2xml($jArray, false);
 }
 
-function emulator_array2xml($array, $xml = false) {
+function emulator_array2xml($array, $xml) {
 	if($xml === false) {
-		$xml = new SimpleXMLElement('<result/>');
+		$xml = new SimpleXMLElement('<root/>');
 	}
 
 	foreach($array as $key => $value) {
+		$key = preg_replace("/[^A-Za-z0-9_]/", 'e', $key);
+		if (is_numeric($key)) $key = 'e'.$key;
+
 		if(is_object($value)) {
-			array2xml(get_object_vars($value), $xml->addChild($key));
+			emulator_array2xml(get_object_vars($value), $xml->addChild($key));
 		}
 		else if(is_array($value)) {
-			array2xml($value, $xml->addChild($key));
+			emulator_array2xml($value, $xml->addChild($key));
 		} else {
-			$xml->addChild($key, $value);
+			$xml->addChild($key, htmlspecialchars($value));
 		}
 	}
 
@@ -208,7 +212,7 @@ function emulator_readDataset($datasetId, $id) {
 
 
 	if (!array_key_exists($id, $jDecode[$datasetId]))
-		throw new Exception("No data found in the emulator dataset : $eedomusScriptsEmulatorDatasetPath::$datasetId.$id");
+		return ''; // throw new Exception("No data found in the emulator dataset : $eedomusScriptsEmulatorDatasetPath::$datasetId.$id");
 
 	return $jDecode[$datasetId][$id];
 }
